@@ -28,10 +28,11 @@ $(function(){
 <div>
   <h1>ツクールMV 会話抽出ツール</h1>
   <div align="center">
-    ツクールMVのイベントに含まれる会話コマンドからテキストを抽出しCSVにするツールです。
-    <!--
-    <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://bit.ly/1NWojLw" data-lang="ja" data-count="none" data-hashtags="bukkakemaker">ツイート</a>
+    ツクールMVのイベントに含まれる会話コマンドからテキストを抽出しCSVにするツールです。<br />
+    いまのところCSVから元のJSONに書き戻すことはできません。
+    <a href="https://twitter.com/share" class="twitter-share-button" data-url="https://mgstudiojp.github.io/tkooldebug_text/" data-lang="ja" data-count="none" data-hashtags="tkooldebug">ツイート</a>
     <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script><br />
+    <!--
     <a href="#inline" class="inline"><button style="font-size:20px; font-weight:bold;">使い方を見る</button></a><br />
     -->
   </div>
@@ -47,17 +48,17 @@ $(function(){
   </div>
   <hr />
 
-  <h2 align="center">3, 生成ボタンを押す</h2>
+  <h2 align="center">2, 生成ボタンを押す</h2>
   <div align="center">
     <form>
-      <input id="createButton" type="button" value="生成" style="width: 200px; height: 50px; font-size: 20px;" onclick="imgRecord()" disabled />
+      <input id="createButton" type="button" value="生成" style="width: 200px; height: 50px; font-size: 20px;" onclick="startCreate()" disabled />
     </form>
     <div id='record' align="center">
     </div>
   </div>
   <hr />
   
-  <h2 align="center">4, 完成！ [ダウンロード]リンクを押すと別窓で開きます</h2>
+  <h2 align="center">3, 完成！ [ダウンロード]リンクを押すと別窓で開きます</h2>
   <div align="center">
     <div id='saved' align="center">
     </div>
@@ -184,29 +185,20 @@ function fileLoadEnd()
   document.getElementById("createButton").disabled = false;
 }
 
-function imgRecord()
-{
-  imgRecordEnd();
-}
-function imgRecordEnd()
-{
-  document.getElementById("createButton").disabled = false;
-  imgSave();
-}
-function imgSave()
+function startCreate()
 {
   var mime = 'text/plain';
   var blob = new Blob([ savefile ], { type: mime });
   if (window.navigator.msSaveBlob) { 
-      window.navigator.msSaveBlob(blob, "output.csv"); 
+    window.navigator.msSaveBlob(blob, "output.csv"); 
   } else { 
-      if (window.URL) {
-        var url = window.URL.createObjectURL(blob);
-        document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
-      } else {
-        var url = window.webkitURL.createObjectURL(blob);
-        document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
-      }
+    if (window.URL) {
+      var url = window.URL.createObjectURL(blob);
+      document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
+    } else {
+      var url = window.webkitURL.createObjectURL(blob);
+      document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
+    }
   } 
 }
 </script>
