@@ -1,0 +1,220 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" /> 
+<meta name="viewport" content="width=720, maximum-scale=5.0, minimum-scale=0.25, ">
+<title>ツクールMV 会話抽出ツール</title> 
+<link title="HTML5.JP RSS Feed" href="http://www.html5.jp/index.rdf" type="application/rss+xml" rel="alternate" />
+
+<link href="colorbox/colorbox.css" type="text/css" rel="stylesheet" />
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="colorbox/jquery.colorbox-min.js"></script>
+<script src="colorbox/jquery.colorbox-ja.js"></script>
+<script type="text/javascript">
+$(function(){
+  $(".inline").colorbox({inline: true});
+});
+</script>
+
+<style type="text/css">
+<!--
+  h1, h2, h3 { text-align: center; }
+  h1 { background-color: #88FF88; }
+-->
+</style>
+</head>
+<body onload="htmlLoad()">
+
+<div>
+  <h1>ツクールMV 会話抽出ツール</h1>
+  <div align="center">
+    ツクールMVのイベントに含まれる会話コマンドからテキストを抽出しCSVにするツールです。
+    <!--
+    <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://bit.ly/1NWojLw" data-lang="ja" data-count="none" data-hashtags="bukkakemaker">ツイート</a>
+    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script><br />
+    <a href="#inline" class="inline"><button style="font-size:20px; font-weight:bold;">使い方を見る</button></a><br />
+    -->
+  </div>
+  <hr />
+  <h2>1, dataフォルダにある MapXXX.json と Mapinfos.json 読み込み</h2>
+  <div id="content" align="center" style="margin:0px; padding:0px;">
+    <div style='vertical-align: middle;'>
+      <div id='imgArea0' style='border: 3px dashed #FFAAAA; padding:30px; margin:10px;'>
+        <span id="inputText0">ここにファイルをドラッグ＆ドロップ</span><br /><br />
+        <span id="inputText1">もしくは<input type="file" multiple="multiple" onchange="dropFile0(undefined, this.files);"/></span><br />
+        <span id="inputFiles"></span>
+      </div>
+  </div>
+  <hr />
+
+  <h2 align="center">3, 生成ボタンを押す</h2>
+  <div align="center">
+    <form>
+      <input id="createButton" type="button" value="生成" style="width: 200px; height: 50px; font-size: 20px;" onclick="imgRecord()" disabled />
+    </form>
+    <div id='record' align="center">
+    </div>
+  </div>
+  <hr />
+  
+  <h2 align="center">4, 完成！ [ダウンロード]リンクを押すと別窓で開きます</h2>
+  <div align="center">
+    <div id='saved' align="center">
+    </div>
+    <div id='download'></div>
+  </div>
+  <hr />
+  <br>
+  <br>
+  <br>
+  <br>
+  <br>
+</div>
+
+<div style="display:none;">
+  <div align="center" id="inline" style="background-color:#FFFFFF;">
+    <button style="font-size:20px; font-weight:bold;" onclick="$.colorbox.close()">閉じる</button><br />
+  </div>
+</div>
+
+<script type="text/javascript">
+
+var jsons = new Array();
+var savefile = null;
+
+function htmlLoad()
+{
+  var area0 = document.getElementById('imgArea0');
+  area0.addEventListener('dragover', dragOverFile);
+  area0.addEventListener('drop', dropFile0);  
+}
+function dropFile0(evt, inputFiles) {
+  var files = null;
+  if (evt != undefined) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    files = evt.dataTransfer.files; // FileList object.
+  } else if (inputFiles != undefined) {
+    files = inputFiles;
+  }
+
+  var jsonFiles = new Array();
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (file.type.match('application.json') || file.name.match('.*\.json')) {
+      jsonFiles.push(file);
+    }
+  }
+  var loadInfo = { count:0, size:jsonFiles.length, };
+  for (var i = 0; i < jsonFiles.length; i++) {
+    var file = jsonFiles[i];
+    var reader = new FileReader();
+    reader.custom = { load:loadInfo, files:jsonFiles, filename:file.name, index:i + jsons.length, size:jsonFiles.length + jsons.length, };
+    reader.onload = function (ev) {
+      var data = JSON.parse(ev.target.result);
+      data.filename = this.custom.filename;
+      data.mapId = parseInt(data.filename.substr(3, 3));
+      jsons[this.custom.index] = data;
+      this.custom.load.count++;
+      if (this.custom.load.count >= this.custom.load.size) {
+        var filenames = '';
+        for (var k = 0; k < jsons.length; k++)
+          filenames += jsons[k].filename + '<br>';
+        document.getElementById('inputFiles').innerHTML = filenames;
+        fileLoadEnd();
+      }
+    }
+    reader.readAsText(files[i]);
+  }
+}
+function dragOverFile(evt) {
+  evt.stopPropagation();
+  evt.preventDefault();
+  evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+}
+
+function fileLoadEnd()
+{
+  var endl = '\r\n';
+  var header = 'マップID,マップ名,イベントID,イベント名,ページ,行数,メッセージ' + endl;
+  var body = new Array();
+
+  var mapIdName = new Array();
+  for (var i = 0; i < jsons.length; i++) {
+    var mapInfo = jsons[i];
+    if (mapInfo.length === undefined)
+      continue;
+    for (var k = 0; k < mapInfo.length; k++) {
+      var info = mapInfo[k];
+      if (info == null)
+        continue;
+      mapIdName[info.id] = info.name;
+    }
+  }
+  for (var i = 0; i < jsons.length; i++) {
+    var mapData = jsons[i];
+    if (mapData.events === undefined)
+      continue;
+    for (var k = 0; k < mapData.events.length; k++) {
+      var ev = mapData.events[k];
+      if (ev == null)
+        continue;
+      for (var n = 0; n < ev.pages.length; n++) {
+        var page = ev.pages[n];
+        for (var c = 0; c < page.list.length; c++) {
+          var cmd = page.list[c];
+          if (cmd.code == 401 && cmd.parameters.length == 1) {
+            var output = new Array();
+            output.push('' + mapData.mapId);
+            output.push(mapIdName[mapData.mapId] === undefined ? mapData.filename : mapIdName[mapData.mapId]);
+            output.push('' + ev.id);
+            output.push(ev.name);
+            output.push('' + (n + 1));
+            output.push('' + (c + 1));
+            output.push('"' + cmd.parameters[0] + '"');
+            body.push(output.join(','));
+          }
+        }
+      }
+    }
+  }
+
+  savefile = header + body.join(endl);
+
+  document.getElementById("createButton").disabled = false;
+}
+
+function imgRecord()
+{
+  imgRecordEnd();
+}
+function imgRecordEnd()
+{
+  document.getElementById("createButton").disabled = false;
+  imgSave();
+}
+function imgSave()
+{
+  var mime = 'text/plain';
+  var blob = new Blob([ savefile ], { type: mime });
+  if (window.navigator.msSaveBlob) { 
+      window.navigator.msSaveBlob(blob, "output.csv"); 
+  } else { 
+      if (window.URL) {
+        var url = window.URL.createObjectURL(blob);
+        document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
+      } else {
+        var url = window.webkitURL.createObjectURL(blob);
+        document.getElementById("download").innerHTML = "<a href='" + url + "' target='_blank' download='output.csv'>[ダウンロード *.csv]</a>";
+      }
+  } 
+}
+</script>
+
+<!-- [FC2 Analyzer] http://analyzer.fc2.com/  -->
+<script language="javascript" src="http://analyzer5.fc2.com/ana/processor.php?uid=58958" type="text/javascript"></script>
+<noscript><div align="right"><img src="http://analyzer5.fc2.com/ana/icon.php?uid=58958&ref=&href=&wid=0&hei=0&col=0" /></div></noscript>
+<!-- [FC2 Analyzer]  -->
+
+</body>
+</html>
