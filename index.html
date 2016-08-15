@@ -58,15 +58,13 @@ $(function(){
   </div>
   <hr />
   
-  <h2 align="center">3, 完成！ [ダウンロード]リンクを押すと別窓で開きます</h2>
+  <h2 align="center">3, 完成！ [ダウンロード]リンクからダウンロード</h2>
   <div align="center">
     <div id='saved' align="center">
     </div>
     <div id='download'></div>
   </div>
   <hr />
-  <br>
-  <br>
   <br>
   <br>
   <br>
@@ -103,9 +101,18 @@ function dropFile0(evt, inputFiles) {
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
     if (file.type.match('application.json') || file.name.match('.*\.json')) {
-      jsonFiles.push(file);
+      var found = false;
+      for (var k = 0; k < jsons.length; k++) {
+        if (jsons[k].filename == file.name) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        jsonFiles.push(file);
     }
   }
+  
   var loadInfo = { count:0, size:jsonFiles.length, };
   for (var i = 0; i < jsonFiles.length; i++) {
     var file = jsonFiles[i];
@@ -135,6 +142,11 @@ function dragOverFile(evt) {
 }
 
 function fileLoadEnd()
+{
+  document.getElementById("createButton").disabled = false;
+}
+
+function startCreate()
 {
   var endl = '\r\n';
   var header = 'マップID,マップ名,イベントID,イベント名,ページ,行数,メッセージ' + endl;
@@ -182,11 +194,6 @@ function fileLoadEnd()
 
   savefile = header + body.join(endl);
 
-  document.getElementById("createButton").disabled = false;
-}
-
-function startCreate()
-{
   var mime = 'text/plain';
   var blob = new Blob([ savefile ], { type: mime });
   if (window.navigator.msSaveBlob) { 
