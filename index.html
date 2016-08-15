@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" /> 
 <meta name="viewport" content="width=720, maximum-scale=5.0, minimum-scale=0.25, ">
-<title>ツクールMV 会話抽出ツール</title> 
+<title>ツクールMV 会話CSV抽出ツール</title> 
 <link title="HTML5.JP RSS Feed" href="http://www.html5.jp/index.rdf" type="application/rss+xml" rel="alternate" />
 
 <link href="colorbox/colorbox.css" type="text/css" rel="stylesheet" />
@@ -26,7 +26,7 @@ $(function(){
 <body onload="htmlLoad()">
 
 <div>
-  <h1>ツクールMV 会話抽出ツール</h1>
+  <h1>ツクールMV 会話CSV抽出ツール</h1>
   <div align="center">
     ツクールMVのイベントに含まれる会話コマンドからテキストを抽出しCSVにするツールです。<br />
     いまのところCSVから元のJSONに書き戻すことはできません。
@@ -37,7 +37,7 @@ $(function(){
     -->
   </div>
   <hr />
-  <h2>1, dataフォルダにある MapXXX.json と Mapinfos.json 読み込み</h2>
+  <h2>1, dataフォルダにある MapXXX.json, Actors.json, Mapinfos.json 読み込み</h2>
   <div id="content" align="center" style="margin:0px; padding:0px;">
     <div style='vertical-align: middle;'>
       <div id='imgArea0' style='border: 3px dashed #FFAAAA; padding:30px; margin:10px;'>
@@ -149,19 +149,31 @@ function fileLoadEnd()
 function startCreate()
 {
   var endl = '\r\n';
-  var header = 'マップID,マップ名,イベントID,イベント名,ページ,行数,メッセージ' + endl;
+  var header = 'マップID,マップ名,イベントID,イベント名,ページ,行数,顔,メッセージ' + endl;
   var body = new Array();
 
   var mapIdName = new Array();
   for (var i = 0; i < jsons.length; i++) {
     var mapInfo = jsons[i];
-    if (mapInfo.length === undefined)
+    if (mapInfo.length === undefined || mapInfo.filename !== 'MapInfos.json')
       continue;
     for (var k = 0; k < mapInfo.length; k++) {
       var info = mapInfo[k];
       if (info == null)
         continue;
       mapIdName[info.id] = info.name;
+    }
+  }
+  var faceIdName = {};
+  for (var i = 0; i < jsons.length; i++) {
+    var actorInfo = jsons[i];
+    if (actorInfo.length === undefined || actorInfo.filename !== 'Actors.json')
+      continue;
+    for (var k = 0; k < actorInfo.length; k++) {
+      var info = actorInfo[k];
+      if (info == null)
+        continue;
+      faceIdName[info.faceName + '_' + info.faceIndex] = info.name;
     }
   }
   for (var i = 0; i < jsons.length; i++) {
@@ -174,9 +186,13 @@ function startCreate()
         continue;
       for (var n = 0; n < ev.pages.length; n++) {
         var page = ev.pages[n];
+        var faceName = '';
         for (var c = 0; c < page.list.length; c++) {
           var cmd = page.list[c];
-          if (cmd.code == 401 && cmd.parameters.length == 1) {
+          if (cmd.code == 101) {
+            var faceId = cmd.parameters[0] + '_' + cmd.parameters[1];
+            faceName = faceIdName[faceId] || '';
+          } else if (cmd.code == 401 && cmd.parameters.length == 1) {
             var output = new Array();
             output.push('' + mapData.mapId);
             output.push(mapIdName[mapData.mapId] === undefined ? mapData.filename : mapIdName[mapData.mapId]);
@@ -184,8 +200,11 @@ function startCreate()
             output.push(ev.name);
             output.push('' + (n + 1));
             output.push('' + (c + 1));
+            output.push(faceName);
             output.push('"' + cmd.parameters[0] + '"');
             body.push(output.join(','));
+          } else {
+            faceName = '';
           }
         }
       }
